@@ -14,6 +14,7 @@
     subtitle,
     alias,
     shortcut,
+    shortcutPlacement = 'inline',
     typeLabel,
     leading,
     trailing,
@@ -27,6 +28,7 @@
     subtitle?: string;
     alias?: string;
     shortcut?: string;
+    shortcutPlacement?: 'inline' | 'trailing';
     typeLabel?: string;
     leading?: Snippet;
     trailing?: Snippet;
@@ -71,13 +73,17 @@
       {#if alias}
         <span data-test="alias-chip" class="alias-chip text-mono">{alias}</span>
       {/if}
-      {#if shortcut}
+      {#if shortcut && shortcutPlacement === 'inline'}
         <KeyboardHint keys={toDisplayKeys(shortcut)} />
       {/if}
     </div>
 
     {#if trailing}
       {@render trailing()}
+    {:else if shortcut && shortcutPlacement === 'trailing'}
+      <div class="flex-shrink-0 ml-auto">
+        <KeyboardHint keys={toDisplayKeys(shortcut)} />
+      </div>
     {:else if typeLabel}
       <span class="font-medium text-[var(--text-secondary)] flex-shrink-0 ml-auto" style="font-size: var(--font-size-md)">{typeLabel}</span>
     {/if}

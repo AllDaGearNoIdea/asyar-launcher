@@ -198,7 +198,7 @@
         <div class="group-header">{category}</div>
         {#each groupActions as action}
           {@const flatIndex = flatActions.indexOf(action)}
-          <div class:action-primary-item={flatIndex === 0}>
+          <div class:action-primary-item={flatIndex === 0} class:action-destructive={action.destructive}>
             <ListItem
               selected={flatIndex === selectedIndex}
               onclick={() => handleActionSelect(action.id)}
@@ -323,6 +323,13 @@
   .action-primary-item :global(.text-title) {
     font-weight: 600;
     color: var(--accent-primary);
+  }
+
+  /* Destructive actions read as red — both label and icon, regardless of
+     whether the row is also the primary item. */
+  .action-destructive :global(.text-title),
+  .action-destructive .action-icon {
+    color: var(--accent-danger);
   }
 
 </style>

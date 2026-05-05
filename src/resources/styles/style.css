@@ -231,6 +231,7 @@ html[data-platform="macos"] .app-root {
 
     --border-color: rgba(255, 255, 255, 0.09);
     --separator: rgba(255, 255, 255, 0.07);
+    --divider-soft: rgba(255, 255, 255, 0.04);
     --shadow-color: rgba(0, 0, 0, 0.45);
   }
 }
@@ -303,6 +304,7 @@ html[data-platform="macos"] .app-root {
 
   --border-color: rgba(255, 255, 255, 0.09);
   --separator: rgba(255, 255, 255, 0.07);
+  --divider-soft: rgba(255, 255, 255, 0.04);
   --shadow-color: rgba(0, 0, 0, 0.45);
 }
 
@@ -322,6 +324,7 @@ html[data-platform="macos"] .app-root {
 
     --border-color: rgba(60, 60, 67, 0.15);
     --separator: rgba(60, 60, 67, 0.12);
+    --divider-soft: rgba(60, 60, 67, 0.06);
 
     --accent-primary: rgb(0, 122, 255);
     --accent-success: rgb(40, 205, 65);
@@ -376,6 +379,7 @@ html[data-platform="macos"] .app-root {
 
     --border-color: rgba(60, 60, 67, 0.15);
     --separator: rgba(60, 60, 67, 0.12);
+    --divider-soft: rgba(60, 60, 67, 0.06);
     --shadow-color: rgba(0, 0, 0, 0.10);
   }
 }
@@ -395,6 +399,7 @@ html[data-platform="macos"] .app-root {
 
   --border-color: rgba(60, 60, 67, 0.15);
   --separator: rgba(60, 60, 67, 0.12);
+  --divider-soft: rgba(60, 60, 67, 0.06);
 
   --accent-primary: rgb(0, 122, 255);
   --accent-success: rgb(40, 205, 65);
@@ -448,6 +453,7 @@ html[data-platform="macos"] .app-root {
 
   --border-color: rgba(60, 60, 67, 0.15);
   --separator: rgba(60, 60, 67, 0.12);
+  --divider-soft: rgba(60, 60, 67, 0.06);
   --shadow-color: rgba(0, 0, 0, 0.10);
 }
 
@@ -648,8 +654,8 @@ html[data-platform="macos"] .app-root {
   }
 
   .split-view-handle {
-    @apply w-1 hover:w-2 cursor-ew-resize z-10;
-    background-color: var(--separator);
+    @apply w-px hover:w-1 cursor-ew-resize z-10;
+    background-color: var(--divider-soft);
     transition: width var(--transition-fast), background-color var(--transition-fast);
 
     &:hover {

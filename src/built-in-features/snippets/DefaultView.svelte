@@ -5,7 +5,7 @@
   import { snippetUiState } from './snippetUiState.svelte';
   import { snippetViewState } from './snippetViewState.svelte';
   import {
-    SplitListDetail, ListItem, ListItemActions, Badge,
+    SplitListDetail, LauncherListRow, Badge,
     ActionFooter, EmptyState, WarningBanner, FormField
   } from '../../components';
   import { feedbackService } from '../../services/feedback/feedbackService.svelte';
@@ -144,10 +144,6 @@
     else if (e.key === 'Escape') { e.preventDefault(); snippetViewState.cancelEdit(); prefillExpansion = null; }
   }
 
-  function handleDeleteRequest(snippet: Snippet) {
-    void confirmDeleteSnippet(snippet.id, snippet.name);
-  }
-
   async function confirmDeleteSnippet(id: string, name: string | null) {
     const confirmed = await feedbackService.confirmAlert({
       title: 'Delete snippet',
@@ -223,15 +219,16 @@
   >
     {#snippet listItem(snippet, index)}
       {#if index === 0 && snippetViewState.pinnedCount > 0}
-        <div class="section-header">Pinned</div>
+        <div class="snippet-section">Pinned</div>
       {/if}
       {#if index === snippetViewState.pinnedCount && snippetViewState.pinnedCount > 0}
-        <div class="section-header">All Snippets</div>
+        <div class="snippet-section">All Snippets</div>
       {/if}
-      <ListItem
+      <LauncherListRow
         data-index={index}
         selected={selectedIndex === index}
         title={snippet.name}
+        subtitle={snippet.keyword ? snippet.keyword : undefined}
         onclick={() => snippetViewState.selectItem(index)}
       >
         {#snippet leading()}
@@ -242,30 +239,7 @@
             </svg>
           </div>
         {/snippet}
-        {#snippet subtitle()}
-          <div class="flex items-center gap-2">
-            {#if snippet.keyword}
-              <Badge text={snippet.keyword} variant="default" mono />
-            {/if}
-            <span class="expansion-preview">{snippet.expansion}</span>
-          </div>
-        {/snippet}
-        {#snippet trailing()}
-          <ListItemActions>
-            <button
-              class="action-btn"
-              class:pin-active={snippet.pinned}
-              onclick={(e) => { e.stopPropagation(); snippetStore.togglePin(snippet.id); snippetService.syncToRust(); }}
-              title={snippet.pinned ? 'Unpin snippet' : 'Pin snippet'}
-            >★</button>
-            <button
-              class="action-btn action-btn-danger"
-              onclick={(e) => { e.stopPropagation(); handleDeleteRequest(snippet); }}
-              title="Delete snippet"
-            >✕</button>
-          </ListItemActions>
-        {/snippet}
-      </ListItem>
+      </LauncherListRow>
     {/snippet}
 
     {#snippet detail()}
@@ -376,23 +350,19 @@
 <style>
   .permission-banner-wrapper { margin: 12px 16px 0; }
   .leading-icon { opacity: 0.6; display: flex; align-items: center; justify-content: center; margin-right: 4px; }
-  .expansion-preview { font-size: var(--font-size-xs); color: var(--text-tertiary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
-  .action-btn { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: none; border-radius: var(--radius-sm); background: transparent; color: var(--text-tertiary); cursor: pointer; font-size: 12px; }
-  .action-btn:hover { color: var(--text-primary); background: var(--bg-secondary); }
-  .action-btn-danger:hover { color: var(--accent-danger); }
-  .pin-active { color: #eab308 !important; }
 
-  .section-header {
-    padding: 10px 12px 6px;
-    font-size: 10px;
-    font-weight: 700;
+  .snippet-section {
+    padding: 16px 9px 4px;
+    font-size: var(--font-size-xs);
+    font-weight: 500;
     color: var(--text-tertiary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+  }
+  .snippet-section:first-child {
+    padding-top: 4px;
   }
 
   /* Detail view */
-  .snippet-detail-content { flex: 1; overflow-y: auto; padding: 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+  .snippet-detail-content { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
   .detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .snippet-name { font-size: var(--font-size-lg); font-weight: 600; color: var(--text-primary); margin: 0; }
   .keyword-row { display: flex; align-items: center; gap: 8px; }

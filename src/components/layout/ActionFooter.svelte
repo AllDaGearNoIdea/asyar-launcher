@@ -30,7 +30,7 @@
     justify-content: space-between;
     height: 48px;
     padding: 0 16px;
-    border-top: 1px solid var(--separator);
+    border-top: 1px solid var(--divider-soft);
     background-color: var(--bg-secondary);
     backdrop-filter: blur(20px);
     flex-shrink: 0;
