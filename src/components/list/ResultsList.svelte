@@ -1,8 +1,7 @@
 <script lang="ts">
-  import { toDisplayKeys } from '../../built-in-features/shortcuts/shortcutFormatter';
-  import { isIconImage, isBuiltInIcon, getBuiltInIconName } from '../../lib/iconUtils';
   import Icon from '../base/Icon.svelte';
   import KeyboardHint from '../base/KeyboardHint.svelte';
+  import LauncherListRow from './LauncherListRow.svelte';
 
   import type { MappedSearchItem } from '../../services/search/types/MappedSearchItem';
 
@@ -33,17 +32,15 @@
 
 <div class="p-2">
   {#each items as item, i}
-    <button
-      type="button"
-      data-index={i}
-      class="result-item {item.style === 'large' ? 'calc-large-item' : ''}"
-      class:selected-result={i === selectedIndex}
-      onclick={() => {
-        onselect?.({ item });
-      }}
-    >
-      {#if item.style === 'large'}
-        {@const calc = (item.icon && CALC_ICONS[item.icon]) || CALC_ICON_FALLBACK}
+    {#if item.style === 'large'}
+      {@const calc = (item.icon && CALC_ICONS[item.icon]) || CALC_ICON_FALLBACK}
+      <button
+        type="button"
+        data-index={i}
+        class="result-item calc-large-item"
+        class:selected-result={i === selectedIndex}
+        onclick={() => onselect?.({ item })}
+      >
         <div class="calc-card" style="--cat-color: {calc.color}">
           <div class="calc-header">
             <div class="calc-header-left">
@@ -68,45 +65,20 @@
             </div>
           </div>
         </div>
-      {:else}
-        <div class="flex items-center w-full" style="gap: 13px">
-          {#if item.icon}
-            {#if isBuiltInIcon(item.icon)}
-              <div class="w-[23px] h-[23px] flex items-center justify-center text-[var(--accent-primary)] flex-shrink-0 rounded">
-                <Icon name={getBuiltInIconName(item.icon)} size={23} />
-              </div>
-            {:else if isIconImage(item.icon)}
-              <img
-                src={item.icon}
-                alt={item.title}
-                class="w-[23px] h-[23px] rounded object-contain flex-shrink-0"
-              />
-            {:else}
-              <div class="w-[23px] h-[23px] flex items-center justify-center text-[var(--text-secondary)] text-sm flex-shrink-0 rounded">
-                {item.icon}
-              </div>
-            {/if}
-          {/if}
-
-          <div class="flex-1 flex items-center min-w-0" style="gap: 13px">
-            <span class="result-title truncate">{item.title}</span>
-            {#if item.subtitle}
-              <span class="font-medium text-[var(--text-secondary)] truncate flex-shrink" style="font-size: var(--font-size-md)">{item.subtitle}</span>
-            {/if}
-            {#if item.alias}
-              <span data-test="alias-chip" class="alias-chip text-mono">{item.alias}</span>
-            {/if}
-            {#if item.shortcut}
-              <KeyboardHint keys={toDisplayKeys(item.shortcut)} />
-            {/if}
-          </div>
-
-          {#if item.typeLabel}
-            <span class="font-medium text-[var(--text-secondary)] flex-shrink-0 ml-auto" style="font-size: var(--font-size-md)">{item.typeLabel}</span>
-          {/if}
-        </div>
-      {/if}
-    </button>
+      </button>
+    {:else}
+      <LauncherListRow
+        data-index={i}
+        selected={i === selectedIndex}
+        onclick={() => onselect?.({ item })}
+        icon={item.icon}
+        title={item.title}
+        subtitle={item.subtitle}
+        alias={item.alias}
+        shortcut={item.shortcut}
+        typeLabel={item.typeLabel}
+      />
+    {/if}
   {/each}
 </div>
 
