@@ -933,6 +933,19 @@ html[data-platform="linux"][data-theme="dark"] .macos-panel {
     user-select: none;
   }
 
+  /* Sentence-case section header for list views (clipboard, snippets,
+     actions). Pairs with LauncherListRow rows. */
+  .list-section {
+    padding: 16px 9px 4px;
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    color: var(--text-secondary);
+    user-select: none;
+  }
+  .list-section:first-child {
+    padding-top: 4px;
+  }
+
   /* ── View container (wraps each built-in feature view) ── */
   .view-container {
     display: flex;

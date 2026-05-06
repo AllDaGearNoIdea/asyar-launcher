@@ -1,10 +1,7 @@
 <script lang="ts">
   import { logService } from '../../services/log/logService';
-  import { isIconImage, isBuiltInIcon, getBuiltInIconName } from '../../lib/iconUtils';
-  import Icon from '../base/Icon.svelte';
   import Input from '../base/Input.svelte';
-  import KeyboardHint from '../base/KeyboardHint.svelte';
-  import ListItem from '../list/ListItem.svelte';
+  import LauncherListRow from '../list/LauncherListRow.svelte';
   import EmptyState from '../feedback/EmptyState.svelte';
   import { actionService } from '../../services/action/actionService.svelte';
   import type { ApplicationAction } from '../../services/action/actionService.svelte';
@@ -12,6 +9,7 @@
   import { diagnosticsService } from '../../services/diagnostics/diagnosticsService.svelte';
   import { filterActions } from './actionFilter';
   import { actionUsageStore } from '../../services/action/actionUsageStore';
+  import { scrollSelectedIntoView } from '../../lib/listScroll';
 
   let {
     availableActions = [],
@@ -43,10 +41,9 @@
   let selectedIndex = $state(-1);
   let popupRef = $state<HTMLDivElement>();
 
-  function scrollSelectedIntoView() {
+  function scrollSelected() {
     requestAnimationFrame(() => {
-      const elements = Array.from(popupRef?.querySelectorAll('.list-row[data-index]') || []);
-      elements[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+      if (popupRef) scrollSelectedIntoView(popupRef, selectedIndex);
     });
   }
 
@@ -72,7 +69,7 @@
         event.preventDefault();
         event.stopPropagation();
         selectedIndex = selectedIndex >= totalActions - 1 ? 0 : selectedIndex + 1;
-        scrollSelectedIntoView();
+        scrollSelected();
         break;
 
       case 'Tab':
@@ -83,7 +80,7 @@
         } else {
           selectedIndex = selectedIndex >= totalActions - 1 ? 0 : selectedIndex + 1;
         }
-        scrollSelectedIntoView();
+        scrollSelected();
         break;
 
       case 'ArrowUp':
@@ -93,7 +90,7 @@
           selectedIndex = -1; // deselect all; focus stays on input naturally
         } else {
           selectedIndex = selectedIndex - 1;
-          scrollSelectedIntoView();
+          scrollSelected();
         }
         break;
 
@@ -181,56 +178,44 @@
 >
   <h2 id="action-list-heading" class="sr-only">Available Actions</h2>
 
-  <div class="action-search">
-    <Input
-      bind:value={searchQuery}
-      placeholder="Filter actions..."
-      autocomplete="off"
-      autocorrect="off"
-      autocapitalize="off"
-      spellcheck={false}
-    />
-  </div>
-
   <div class="action-scroll custom-scrollbar">
     {#each groupedActions as [category, groupActions], groupIndex}
       <div class="group-section" class:first-group={groupIndex === 0}>
-        <div class="group-header">{category}</div>
+        <div class="list-section">{category}</div>
         {#each groupActions as action}
           {@const flatIndex = flatActions.indexOf(action)}
-          <div class:action-primary-item={flatIndex === 0} class:action-destructive={action.destructive}>
-            <ListItem
+          <div
+            class="action-row"
+            class:action-primary-item={flatIndex === 0}
+            class:action-destructive={action.destructive}
+          >
+            <LauncherListRow
               selected={flatIndex === selectedIndex}
               onclick={() => handleActionSelect(action.id)}
               data-index={flatIndex}
               tabindex="-1"
+              icon={action.icon}
               title={action.label}
-              subtitle={action.description}
-            >
-            {#snippet leading()}
-              <span class="action-icon">
-                {#if isBuiltInIcon(action.icon)}
-                  <Icon name={getBuiltInIconName(action.icon!)} size={15} />
-                {:else if action.icon && isIconImage(action.icon)}
-                  <img src={action.icon} alt="" class="w-4 h-4 object-contain" />
-                {:else if action.icon}
-                  <span class="emoji-icon">{action.icon}</span>
-                {/if}
-              </span>
-            {/snippet}
-
-            {#snippet trailing()}
-              {#if action.shortcut}
-                <KeyboardHint keys={action.shortcut} />
-              {/if}
-            {/snippet}
-          </ListItem>
-        </div>
+              shortcut={action.shortcut}
+              shortcutPlacement="trailing"
+            />
+          </div>
         {/each}
       </div>
     {:else}
       <EmptyState message="No matching actions" />
     {/each}
+  </div>
+
+  <div class="action-search">
+    <Input
+      bind:value={searchQuery}
+      placeholder="Search for actions..."
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      spellcheck={false}
+    />
   </div>
 </div>
 
@@ -239,7 +224,7 @@
     position: fixed;
     bottom: 48px; /* 40px bar height + 8px gap */
     right: 12px;
-    width: 320px;
+    width: 340px;
     max-height: 60vh;
     display: flex;
     flex-direction: column;
@@ -270,66 +255,42 @@
   }
 
   .group-section:not(.first-group) {
-    border-top: 1px solid var(--separator);
+    border-top: 1px solid var(--divider-soft);
     padding-top: 4px;
     margin-top: 4px;
   }
 
-  .group-header {
-    font-size: var(--font-size-2xs);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-tertiary);
-    padding: 6px 10px 4px;
-    user-select: none;
-    position: sticky;
-    top: -6px;
-    z-index: 1;
-    background: color-mix(in srgb, var(--bg-popup) 95%, transparent);
-    margin: 0 -6px;
-  }
-
   .action-search {
-    padding: 10px 10px 4px 10px;
-    border-bottom: 1px solid var(--separator);
+    padding: 6px 12px;
+    border-top: 1px solid var(--divider-soft);
+    background: color-mix(in srgb, var(--bg-popup) 95%, transparent);
   }
 
   .action-search :global(.input) {
-    font-size: var(--font-size-sm);
-    padding-top: var(--space-1);
-    padding-bottom: var(--space-1);
+    font-size: var(--font-size-md);
+    padding: 4px 0;
+    border: none;
+    background: transparent;
+    border-radius: 0;
+  }
+  .action-search :global(.input:focus) {
+    border: none;
+    box-shadow: none;
   }
 
-  .action-icon {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--accent-primary);
-    overflow: hidden;
+  .action-row :global(.result-title) {
+    font-size: var(--font-size-md);
   }
 
-  .emoji-icon {
-    font-size: var(--font-size-xs);
-    line-height: 1;
-    display: block;
-    max-width: 18px;
-    max-height: 18px;
-  }
-
-  .action-primary-item :global(.text-title) {
+  .action-primary-item :global(.result-title) {
     font-weight: 600;
     color: var(--accent-primary);
   }
 
   /* Destructive actions read as red — both label and icon, regardless of
      whether the row is also the primary item. */
-  .action-destructive :global(.text-title),
-  .action-destructive .action-icon {
-    color: var(--accent-danger);
+  .action-destructive :global(.result-title),
+  .action-destructive :global(.result-item > div > div:first-child) {
+    color: var(--accent-danger) !important;
   }
-
 </style>

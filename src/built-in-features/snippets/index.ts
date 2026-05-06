@@ -109,7 +109,7 @@ class SnippetsExtension implements Extension {
       context: ActionContext.EXTENSION_VIEW,
       confirm: true,
       destructive: true,
-      shortcut: 'Cmd+Backspace',
+      shortcut: 'Super+Backspace',
       execute: async () => {
         const s = snippetViewState.selectedSnippet;
         if (s) {

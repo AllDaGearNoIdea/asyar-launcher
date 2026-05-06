@@ -310,14 +310,14 @@
   >
     {#snippet listItem(item, index)}
       {#if index === 0 && favoritesCount > 0}
-        <div class="time-section">Pinned</div>
+        <div class="list-section">Pinned</div>
       {/if}
       {@const isFirstNonFavorite = index === favoritesCount && index < filteredItems.length}
       {@const prevItem = index > favoritesCount ? filteredItems[index - 1] : null}
       {@const sectionLabel = !item.favorite ? timeSection(item.createdAt) : null}
       {@const showDayHeader = !item.favorite && (isFirstNonFavorite || (prevItem && timeSection(prevItem.createdAt) !== sectionLabel))}
       {#if showDayHeader && sectionLabel}
-        <div class="time-section">{sectionLabel}</div>
+        <div class="list-section">{sectionLabel}</div>
       {/if}
       <LauncherListRow
         data-index={index}
@@ -521,16 +521,6 @@
 </div>
 
 <style>
-  .time-section {
-    padding: 16px 9px 4px;
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    color: var(--text-tertiary);
-  }
-  .time-section:first-child {
-    padding-top: 4px;
-  }
-
   .clip-detail-content {
     flex: 1;
     overflow: auto;

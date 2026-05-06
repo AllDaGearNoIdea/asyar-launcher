@@ -314,7 +314,7 @@ class ClipboardHistoryExtension implements Extension {
       title: 'Delete',
       description: 'Delete the selected clipboard item',
       icon: 'icon:trash',
-      shortcut: 'Cmd+Backspace',
+      shortcut: 'Super+Backspace',
       category: 'clipboard-action',
       extensionId: 'clipboard-history',
       destructive: true,

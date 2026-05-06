@@ -219,10 +219,10 @@
   >
     {#snippet listItem(snippet, index)}
       {#if index === 0 && snippetViewState.pinnedCount > 0}
-        <div class="snippet-section">Pinned</div>
+        <div class="list-section">Pinned</div>
       {/if}
       {#if index === snippetViewState.pinnedCount && snippetViewState.pinnedCount > 0}
-        <div class="snippet-section">All Snippets</div>
+        <div class="list-section">All Snippets</div>
       {/if}
       <LauncherListRow
         data-index={index}
@@ -350,16 +350,6 @@
 <style>
   .permission-banner-wrapper { margin: 12px 16px 0; }
   .leading-icon { opacity: 0.6; display: flex; align-items: center; justify-content: center; margin-right: 4px; }
-
-  .snippet-section {
-    padding: 16px 9px 4px;
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    color: var(--text-tertiary);
-  }
-  .snippet-section:first-child {
-    padding-top: 4px;
-  }
 
   /* Detail view */
   .snippet-detail-content { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
