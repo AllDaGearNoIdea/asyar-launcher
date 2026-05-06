@@ -2,6 +2,8 @@
   import { logService } from '../../services/log/logService';
   import Input from '../base/Input.svelte';
   import LauncherListRow from '../list/LauncherListRow.svelte';
+  import Icon from '../base/Icon.svelte';
+  import { isBuiltInIcon, isIconImage, getBuiltInIconName } from '../../lib/iconUtils';
   import EmptyState from '../feedback/EmptyState.svelte';
   import { actionService } from '../../services/action/actionService.svelte';
   import type { ApplicationAction } from '../../services/action/actionService.svelte';
@@ -19,13 +21,7 @@
     onclose
   }: {
     availableActions?: ApplicationAction[];
-    /** Name of the currently-selected launcher row. Drives the popup
-     * header on the main launcher (e.g. "Clipboard History"). Ignored
-     * when inExtensionView is true. */
     selectedItemName?: string | null;
-    /** True when an extension view is active. Suppresses the header
-     * entirely — the popup's actions are obviously about the current
-     * view, no anchor needed. */
     inExtensionView?: boolean;
     onclose?: () => void;
   } = $props();
@@ -65,7 +61,7 @@
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      // Raycast-style chain: clear the popup's search first, then close on the next press.
+      // Esc clears the filter first, then closes on the next press.
       if (searchQuery.length > 0) {
         searchQuery = '';
       } else {
@@ -76,38 +72,22 @@
 
     if (flatActions.length === 0) return;
 
-    switch (event.key) {
-      case 'ArrowDown':
-      case 'Tab':
-        if (event.key === 'Tab' && event.shiftKey) {
-          event.preventDefault();
-          event.stopPropagation();
-          selection.moveSelection('up');
-          scrollSelected();
-          break;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        selection.moveSelection('down');
-        scrollSelected();
-        break;
+    const isDown = event.key === 'ArrowDown' || (event.key === 'Tab' && !event.shiftKey);
+    const isUp = event.key === 'ArrowUp' || (event.key === 'Tab' && event.shiftKey);
 
-      case 'ArrowUp':
-        event.preventDefault();
-        event.stopPropagation();
-        selection.moveSelection('up');
-        scrollSelected();
-        break;
+    if (isDown || isUp) {
+      event.preventDefault();
+      event.stopPropagation();
+      selection.moveSelection(isDown ? 'down' : 'up');
+      scrollSelected();
+      return;
+    }
 
-      case 'Enter':
-        if (selection.selectedIndex >= 0) {
-          event.preventDefault();
-          event.stopPropagation();
-          const currentAction = selection.selectedItem;
-          if (currentAction) handleActionSelect(currentAction.id);
-        }
-        // selectedIndex === -1: let Enter pass through to the input naturally
-        break;
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      event.stopPropagation();
+      const action = selection.selectedItem;
+      if (action) handleActionSelect(action.id);
     }
   }
 
@@ -182,11 +162,10 @@
 >
   <h2 id="action-list-heading" class="sr-only">Available Actions</h2>
 
-  {#if showHeader}
-    <div class="popup-header">{selectedItemName}</div>
-  {/if}
-
   <div class="action-scroll custom-scrollbar">
+    {#if showHeader}
+      <div class="popup-header">{selectedItemName}</div>
+    {/if}
     {#each groupedActions as [, groupActions], groupIndex}
       <div class="group-section" class:first-group={groupIndex === 0}>
         {#each groupActions as action}
@@ -204,7 +183,25 @@
               title={action.label}
               shortcut={action.shortcut}
               shortcutPlacement="trailing"
-            />
+            >
+              {#snippet leading()}
+                {#if action.icon && isBuiltInIcon(action.icon)}
+                  <div class="builtin-icon-tile">
+                    <Icon name={getBuiltInIconName(action.icon)} size={18} variant="sf" />
+                  </div>
+                {:else if action.icon && isIconImage(action.icon)}
+                  <img
+                    src={action.icon}
+                    alt={action.label}
+                    class="w-[23px] h-[23px] rounded object-contain flex-shrink-0"
+                  />
+                {:else if action.icon}
+                  <div class="w-[23px] h-[23px] flex items-center justify-center text-[var(--text-secondary)] text-sm flex-shrink-0 rounded">
+                    {action.icon}
+                  </div>
+                {/if}
+              {/snippet}
+            </LauncherListRow>
           </div>
         {/each}
       </div>
@@ -234,20 +231,12 @@
     height: 243px;
     display: flex;
     flex-direction: column;
-    /* Frosted-glass overlay — Raycast's popup reads as a brighter
-       diffuse layer floating *on top* of the launcher rather than a
-       see-through window. Higher alpha gives it body; aggressive blur
-       and saturation smear what's underneath into a soft glow. */
     background: color-mix(in srgb, var(--bg-popup) 80%, transparent);
     backdrop-filter: blur(60px) saturate(200%);
     -webkit-backdrop-filter: blur(60px) saturate(200%);
-    border-radius: var(--radius-xl); /* 12px — matches launcher window */
-    /* Raycast-style soft elevation: large feathered ambient cast
-       weighted slightly downward, plus a tighter contact layer for
-       definition near the popup edge. No border. */
-    /* Casts to the left (negative X) and slightly down — the popup
-       sits in the bottom-right of the launcher, so its shadow falls
-       leftward across the visible launcher surface. */
+    border-radius: 20px;
+    /* Shadow casts left-and-down: the popup sits in the bottom-right of
+       the launcher, so the visible cast falls across the launcher surface. */
     box-shadow:
       -28px 20px 80px -20px rgba(0, 0, 0, 0.3),
       -14px 10px 40px -16px rgba(0, 0, 0, 0.18),
@@ -257,7 +246,6 @@
     outline: none;
   }
 
-  /* Forced dark theme */
   :global(html[data-theme="dark"]) .action-popup {
     box-shadow:
       -28px 20px 80px -20px rgba(0, 0, 0, 0.6),
@@ -265,7 +253,6 @@
       -4px 3px 12px -6px rgba(0, 0, 0, 0.25);
   }
 
-  /* OS-tracking dark (no explicit data-theme) */
   @media (prefers-color-scheme: dark) {
     :global(html:not([data-theme])) .action-popup {
       box-shadow:
@@ -275,13 +262,8 @@
     }
   }
 
-  /* Single context header at the top of the popup, replacing the old
-     per-category section labels. Shows the currently-selected launcher
-     row's name (e.g. "Clipboard History") so the user knows whose
-     actions these are. Suppressed when inside an extension view.
-     Sits close to the first action — no divider, mirroring Raycast. */
   .popup-header {
-    padding: 12px 14px 0;
+    padding: 11px 10px 9px;
     font-size: var(--font-size-sm);
     font-weight: 500;
     color: var(--text-secondary);
@@ -292,7 +274,10 @@
     flex: 1;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 8px;
+    /* Top inset is margin not padding so the scroller — and the macOS
+       overlay scrollbar track — starts below the rounded top corner. */
+    margin-top: 8px;
+    padding: 0 8px 8px;
   }
 
   :global(html[data-platform="linux"]) .action-popup {
@@ -304,12 +289,8 @@
     margin-bottom: 4px;
   }
 
-  /* Edge-to-edge divider above each non-first group, with generous
-     breathing room either side — matches Raycast's section spacing.
-     Negative horizontal margins cancel `.action-scroll`'s 8px padding
-     so the rule spans the full popup width while the rows above and
-     below stay inset. Slightly stronger than --divider-soft so it
-     reads clearly on the translucent popup surface. */
+  /* Negative horizontal margins cancel .action-scroll's 8px padding so
+     the divider runs edge-to-edge while the rows stay inset. */
   .group-section:not(.first-group)::before {
     content: '';
     display: block;
@@ -328,14 +309,11 @@
   }
 
   .action-search {
-    /* Fixed 41px row to match Raycast's search-input footer. */
     height: 41px;
     flex-shrink: 0;
     display: flex;
     align-items: center;
     padding: 0 12px;
-    /* Matches the section dividers above — same contrast as Raycast's
-       rule above the action search input. */
     border-top: 1px solid rgba(60, 60, 67, 0.11);
     background: transparent;
     box-sizing: border-box;
@@ -361,8 +339,6 @@
     background: transparent;
     border-radius: 0;
     color: var(--text-primary);
-    /* Match the main launcher caret tint so the blinker reads
-       consistently across the two inputs. */
     caret-color: color-mix(in srgb, var(--text-primary) 60%, var(--bg-secondary-full-opacity) 40%) !important;
   }
   .action-search :global(.input::placeholder) {
@@ -378,15 +354,12 @@
     font-size: var(--font-size-md);
   }
 
-  /* Inside the actions popup, built-in icons render as flat glyphs in
-     the title color — not filled blue tiles. The popup is a secondary
-     surface and doesn't need the brand-tile treatment. */
+  /* Built-in icons render as flat glyphs in the popup, not filled tiles. */
   .action-popup :global(.builtin-icon-tile) {
     background-color: transparent;
     color: var(--text-primary);
   }
 
-  /* Destructive actions read as red — title and icon glyph both. */
   .action-destructive :global(.result-title),
   .action-destructive :global(.builtin-icon-tile) {
     color: var(--accent-danger) !important;

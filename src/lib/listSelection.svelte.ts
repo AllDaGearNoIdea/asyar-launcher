@@ -1,25 +1,6 @@
-/**
- * Shared selection state for list views — auto-selects the first item when
- * results exist, clamps when the list shrinks below the current index, drops
- * to -1 when empty, and wraps on arrow-key moves.
- *
- * Pass `items` as a reactive getter (not an array) so `selectedIndex` and
- * `selectedItem` re-derive whenever the source list changes. Clamping is
- * lazy — it happens inside the getters, so the primitive works equally well
- * inside a component (`<script>`) or at module scope (state classes) without
- * needing an `$effect.root` wrapper.
- *
- * Used by ActionListPopup, snippet/store/clipboard view state classes, and
- * any future flat or sectioned list. Sectioned views render groups from the
- * same flat list this primitive tracks.
- */
-
-/**
- * Shift an index up or down through a list of `length`, optionally wrapping
- * past the edges. Use this directly when your store tracks selection by id
- * (or some other stable handle) rather than by index — that way the wrap
- * arithmetic isn't open-coded in every domain class.
- */
+/** Shift an index by one slot, wrapping by default. Exposed for stores
+ * that key selection by id (rather than by index) and just need the
+ * arithmetic. */
 export function shiftIndex(
   current: number,
   length: number,
@@ -44,21 +25,19 @@ export interface ListSelection<T> {
 }
 
 export interface ListSelectionOptions<T> {
-  /** Reactive getter for the current items. */
   items: () => readonly T[];
-  /** Wrap arrow-key navigation past the edges. Defaults to true. */
   wrap?: boolean;
 }
 
+/** Index-based selection that auto-picks the first item, clamps when the
+ * list shrinks, drops to -1 when empty, and wraps on arrow moves. `items`
+ * is a getter so the clamp re-runs whenever the source list changes. */
 export function useListSelection<T>({
   items,
   wrap = true,
 }: ListSelectionOptions<T>): ListSelection<T> {
   let raw = $state(0);
 
-  // Single source of truth for the clamped index. Reads `items()` so this
-  // re-evaluates whenever the source list changes — empty → -1, out-of-range
-  // → 0, otherwise the user's pick is preserved across benign reshuffles.
   const clamped = $derived.by(() => {
     const len = items().length;
     if (len === 0) return -1;

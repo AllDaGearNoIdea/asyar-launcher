@@ -83,29 +83,6 @@
 </div>
 
 <style>
-  /* ── Alias chip ───────────────────────────────────────── */
-  /* Raycast-style: thin border, transparent fill, monospace.
-     Distinct from the filled kbd chips by being hollow. */
-  .alias-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: var(--space-7);
-    min-width: var(--space-7);
-    padding: 0 var(--space-2);
-    border-radius: var(--radius-xs);
-    border: 1px solid var(--border-color);
-    background-color: transparent;
-    color: var(--text-secondary);
-    font-size: var(--font-size-xs);
-    font-weight: 500;
-    line-height: 1;
-    letter-spacing: 0.02em;
-    user-select: none;
-    flex-shrink: 0;
-    box-sizing: border-box;
-  }
-
   /* ── Card container (overrides .result-item) ─────────── */
   .calc-large-item {
     padding: 0 !important;

@@ -52,10 +52,6 @@ export class StoreViewStateClass {
     return q ? this.searchEngine.search(q) : this.allItems;
   });
 
-  // Selection state delegated to the shared primitive — auto-selects first,
-  // clamps when filtering shrinks the list, wraps on arrow moves. The store
-  // view's domain logic (preserve selection across data refresh, slug
-  // tracking) sits on top of this.
   private selection = useListSelection({ items: () => this.filteredItems });
 
   get selectedIndex(): number {
@@ -88,14 +84,12 @@ export class StoreViewStateClass {
     this.isLoading = false;
     this.loadError = false;
     this.errorMessage = "";
-    // The selection primitive's clamp handles every case: in-range survives,
-    // out-of-range falls to 0, empty falls to -1.
   }
 
   setSearch(query: string) {
     if (this.searchQuery === query) return;
     this.searchQuery = query;
-    // New filter: re-anchor at the top so the user sees the strongest match.
+    // Re-anchor at the top so the strongest match for the new query is selected.
     this.selection.setIndex(0);
   }
 
@@ -138,8 +132,6 @@ export class StoreViewStateClass {
     this.allItems = this.allItems.map(it =>
       it.slug === slug ? { ...it, status } : it
     );
-    // selectedItem is derived from allItems → filteredItems[selectedIndex],
-    // so the new status surfaces automatically on the next read.
   }
 
   applyUpdateStatus(updates: AvailableUpdate[]): void {

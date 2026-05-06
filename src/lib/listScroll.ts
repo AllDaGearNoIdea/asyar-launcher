@@ -1,13 +1,8 @@
-/**
- * Scroll a row into view inside a list container, Raycast-style:
- * - At the very first/last index, scroll the container fully to its edge
- *   so padding or section headers above the first row stay visible.
- * - Otherwise, keep one row of "peek" before and after the selected row
- *   so the next/previous item is always partially in view.
- *
- * Used by the main results list, SplitListDetail, and ActionListPopup so
- * all list views share one scroll behaviour.
- */
+/** Scroll a row into view inside a list container. At the first/last
+ * index the container scrolls fully to its edge so padding and section
+ * headers stay visible; otherwise the row is nudged just enough to keep
+ * an 8px gap from the viewport edge. Shared by the main results list,
+ * SplitListDetail, and ActionListPopup. */
 export function scrollSelectedIntoView(listContainer: HTMLElement, selectedIndex: number): void {
   if (selectedIndex < 0) return;
   const selectedElement = listContainer.querySelector<HTMLElement>(`[data-index="${selectedIndex}"]`);
@@ -44,8 +39,6 @@ export function scrollSelectedIntoView(listContainer: HTMLElement, selectedIndex
   const offsetTop = rowRect.top - scrollerRect.top + scroller.scrollTop;
   const rowBottom = offsetTop + rowRect.height;
 
-  // Keep a small visual gap above/below the selected row when it's near the
-  // viewport edge — no peek of the next item, just breathing room.
   const minScroll = rowBottom + EDGE_GAP - scroller.clientHeight;
   const maxScroll = offsetTop - EDGE_GAP;
 

@@ -91,9 +91,6 @@
 </button>
 
 <style>
-  /* Built-in icons render as a filled blue tile (matching the size of
-     application icons in the same row) with a white glyph — same
-     visual weight as Raycast's filled-square treatment. */
   .builtin-icon-tile {
     width: 23px;
     height: 23px;
@@ -106,8 +103,6 @@
     color: #fff;
   }
 
-  /* The .alias-chip rule lives in ResultsList.svelte today; mirroring
-     here so a row used outside that container still renders correctly. */
   .alias-chip {
     display: inline-flex;
     align-items: center;

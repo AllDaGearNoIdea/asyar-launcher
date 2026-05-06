@@ -42,11 +42,8 @@
       ?? 'Actions'
   })));
 
-  // While inside an extension view, the bottom-left shows the active extension
-  // (icon + name, plus any subtitle the view set). This anchors the user in
-  // the current context instead of being blank. Diagnostics still take
-  // precedence — DiagnosticBar conditionally renders nothing when there's no
-  // current diagnostic, so the InformationPanel fills that empty slot.
+  // Inside an extension view the bottom-left shows the active extension;
+  // diagnostics take precedence when present.
   let activeViewManifest = $derived.by(() => {
     const view = viewManager.activeView;
     if (!view) return null;

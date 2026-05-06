@@ -54,8 +54,6 @@ describe('snippetViewState', () => {
   describe('setSearch(query)', () => {
     it('updates searchQuery and resets selectedIndex to first match', () => {
       snippetViewState.selectItem(2);
-      // Query that still matches at least one snippet, so the primitive lands
-      // selection at 0 rather than -1 (the empty-list state).
       snippetViewState.setSearch('work');
       expect(snippetViewState.searchQuery).toBe('work');
       expect(snippetViewState.selectedIndex).toBe(0);
@@ -167,9 +165,7 @@ describe('snippetViewState', () => {
       expect(snippetViewState.selectedSnippet?.id).toBe('2');
     });
 
-    it('clamps an out-of-range setIndex back to the first item', () => {
-      // Domain change with the shared selection primitive: setIndex(10) on a
-      // 3-item list is rejected, so the index stays at the auto-selected 0.
+    it('rejects an out-of-range index and stays at the auto-selected first item', () => {
       snippetViewState.selectItem(10);
       expect(snippetViewState.selectedSnippet?.id).toBe('1');
     });

@@ -41,8 +41,7 @@ class ShortcutService {
 
     const [modifier, key] = parseShortcut(shortcut);
 
-    // Unregister existing shortcut for this item if any. Capture the prior
-    // icon so a reassign that doesn't pass one preserves the original.
+    // Reassigning preserves the original icon when the caller doesn't pass one.
     const existing = shortcutStore.getByObjectId(objectId);
     if (existing) {
       await this.unregister(objectId);

@@ -108,11 +108,9 @@
     window.addEventListener('keydown', keyboard.handleGlobalKeydown, true);
     window.addEventListener('blur', handleBlur);
 
-    // The launcher panel hides on resign-key (clicked off, hotkey-toggled).
-    // Tear the action popup down too — otherwise it stays mounted while
-    // hidden, and on re-invoke its keydown listener intercepts arrows/enter
-    // before the main launcher does. macOS uses this Tauri event because
-    // the NSPanel doesn't fire DOM blur on the WKWebView.
+    // Close the action popup when the panel hides — the NSPanel doesn't fire
+    // DOM blur, so without this its keydown listener keeps swallowing arrows
+    // and Enter on the next launcher invocation.
     let unlistenResignKey: UnlistenFn | null = null;
     listen('main_panel_did_resign_key', () => {
       if (isActionPanelOpen) {
@@ -145,10 +143,8 @@
   const argumentMode = $derived(commandArgumentsService.active);
   const argumentCanSubmit = $derived(commandArgumentsService.canSubmit());
 
-  // Header title for the action popup. Prefer the original SearchResult.name
-  // so the chip stays stable through subtitle/icon changes; fall back to the
-  // rendered row title when the original is briefly null (e.g. during list
-  // churn just after navigating back to the launcher).
+  // Prefer the original SearchResult.name for stability across subtitle/icon
+  // churn; fall back to the rendered title when the original is briefly null.
   const actionPopupHeaderName = $derived.by(() => {
     const original = controller.currentSelectedItemOriginal?.name;
     if (original) return original;

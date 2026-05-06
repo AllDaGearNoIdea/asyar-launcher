@@ -22,11 +22,9 @@ pub enum ResolvedTheme {
     Dark,
 }
 
-/// Picks the NSVisualEffectMaterial that gives the best contrast for the
-/// resolved appearance. HudWindow gives a translucent vibrancy that reads as
-/// an even darkening over the desktop in both modes — switching to a lighter
-/// material in light mode (e.g. Sidebar) made the launcher noticeably less
-/// translucent than dark mode, so we use HudWindow uniformly.
+/// HudWindow is the only material that stays uniformly translucent across
+/// both modes — Sidebar in light made the launcher look nearly opaque while
+/// dark stayed vibrant, breaking visual parity.
 pub fn material_for_resolved_theme(_theme: ResolvedTheme) -> NSVisualEffectMaterial {
     NSVisualEffectMaterial::HudWindow
 }
@@ -1085,10 +1083,6 @@ pub fn apply_show_more_bar_style(
 mod tests {
     use super::*;
 
-    /// Both Light and Dark map to HudWindow today. We previously tried
-    /// switching Light to Sidebar for crisper text on light desktops, but
-    /// that material is much less translucent — the launcher ended up
-    /// looking nearly opaque in light mode while staying vibrant in dark.
     #[cfg(target_os = "macos")]
     #[test]
     fn light_theme_maps_to_hud_window_material() {
@@ -1137,16 +1131,10 @@ mod tests {
     }
 }
 
-// ─── SF Symbols mask rendering ───────────────────────────────────────────
-//
-// Renders a system SF Symbol to an opaque-white PNG that the web layer
-// uses as a CSS mask-image. Colour is supplied by CSS (`background-color:
-// currentColor`), so a single cached PNG per (symbol, size, weight) covers
-// every theme + destructive variant.
-//
-// Renders at 3x for crisp output on Retina displays. Output dimensions are
-// `(size * 3) × (size * 3)` pixels but the PNG carries the natural size in
-// its DPI metadata so `<img>`/`mask-image` consumers see the right CSS px.
+/// Renders SF Symbols to white-on-transparent PNGs that the web layer uses
+/// as CSS `mask-image`s, so colour comes from `currentColor` and one cached
+/// PNG covers every theme. Rasterised at @3x for Retina; the PNG carries
+/// its natural CSS-px size so consumers size correctly.
 pub mod sf_symbols {
     use super::*;
     use std::collections::HashMap;
@@ -1156,20 +1144,15 @@ pub mod sf_symbols {
     use objc2_foundation::NSData;
     use objc2::encode::{Encoding, RefEncode};
 
-    // CGImage is an opaque CoreFoundation type (`^{CGImage=}`), not an
-    // NSObject. objc2 rejects returning it through the generic `@` /
-    // `^v` types, so we declare a stub with the right RefEncode — same
-    // pattern as the existing CGColorStub in the show-more-bar module.
+    // CGImage is an opaque CoreFoundation type, not NSObject — objc2 needs
+    // a stub with the right RefEncode to return a pointer to one. Same
+    // pattern as CGColorStub in the show-more-bar module.
     #[repr(C)]
     struct CGImageStub { _private: [u8; 0] }
     unsafe impl RefEncode for CGImageStub {
         const ENCODING_REF: Encoding = Encoding::Pointer(&Encoding::Struct("CGImage", &[]));
     }
 
-    /// What the JS side gets back. Carries both the PNG (so we can mask it
-    /// with `mask-image`) and the symbol's *natural* aspect ratio at the
-    /// requested point size, so the consumer can give the mask box the
-    /// right intrinsic width/height — SF Symbols are not all square.
     #[derive(serde::Serialize, Clone)]
     pub struct SymbolMask {
         pub png_b64: String,
@@ -1177,19 +1160,17 @@ pub mod sf_symbols {
         pub height: f64,
     }
 
-    // Cache: (symbol_name, size_px, weight_token) → SymbolMask. Capped at
-    // 256 entries; eviction is "drop everything" when full because hot
-    // icons reappear on next paint and the cost of a re-render is small.
     static CACHE: Mutex<Option<HashMap<String, SymbolMask>>> = Mutex::new(None);
+    /// Hot icons reappear on the next paint and re-render is cheap, so
+    /// eviction is "drop everything" once the cap is hit.
     const CACHE_MAX: usize = 256;
 
     fn cache_key(name: &str, size: f64, weight: &str) -> String {
         format!("{}|{}|{}", name, size as u32, weight)
     }
 
+    /// NSFontWeight values; mirrors SymbolWeight in the show-more-bar module.
     fn weight_to_value(weight: &str) -> f64 {
-        // NSFontWeight values (UIFontWeight on iOS); see SymbolWeight in
-        // the show-more-bar module above for the same mapping.
         match weight {
             "ultralight" => -0.8,
             "thin"       => -0.6,
@@ -1204,17 +1185,6 @@ pub mod sf_symbols {
         }
     }
 
-    /// Render an SF Symbol as a white-on-transparent PNG plus its natural
-    /// dimensions at the requested point size. The PNG bytes are
-    /// base64-encoded; the JS side prepends `data:image/png;base64,`.
-    ///
-    /// Returns `Err` for unknown symbols or if the OS cannot produce an
-    /// image (e.g. the symbol name is misspelled). The frontend should
-    /// fall back to its Lucide rendering on error.
-    ///
-    /// Wrapped by `commands::sf_symbols::render_sf_symbol_mask` for
-    /// invoke_handler registration; that wrapper is what `#[tauri::command]`
-    /// is attached to, so this stays a plain Rust function.
     pub fn render_sf_symbol_mask(
         name: String,
         size: f64,
@@ -1223,7 +1193,6 @@ pub mod sf_symbols {
         let weight = weight.as_deref().unwrap_or("regular");
         let key = cache_key(&name, size, weight);
 
-        // Cache hit?
         {
             let mut guard = CACHE.lock().map_err(|_| "cache poisoned".to_string())?;
             let map = guard.get_or_insert_with(HashMap::new);
@@ -1234,7 +1203,6 @@ pub mod sf_symbols {
 
         let mask = unsafe { render_symbol_to_png(&name, size, weight)? };
 
-        // Insert + evict if over cap.
         {
             let mut guard = CACHE.lock().map_err(|_| "cache poisoned".to_string())?;
             let map = guard.get_or_insert_with(HashMap::new);
@@ -1247,29 +1215,23 @@ pub mod sf_symbols {
         Ok(mask)
     }
 
-    // SAFETY: The Cocoa pipeline (NSImage symbol lookup → NSGraphicsContext
-    // → NSBitmapImageRep) is only safe on the main thread. Tauri's command
-    // dispatcher runs commands on the main thread by default for sync
-    // signatures, which is what we want here. The unsafe blocks are scoped
-    // to individual `msg_send!` calls; each is annotated.
+    // SAFETY: The AppKit pipeline (NSImage → NSBitmapImageRep) is main-thread
+    // only. Tauri dispatches sync commands on the main thread, which is what
+    // this expects.
     unsafe fn render_symbol_to_png(name: &str, size: f64, weight: &str) -> Result<SymbolMask, String> {
         let scale: f64 = 3.0;
 
         let nsstring_cls = AnyClass::get("NSString").ok_or("NSString unavailable")?;
         let nsimage_cls = AnyClass::get("NSImage").ok_or("NSImage unavailable")?;
-        let nscolor_cls = AnyClass::get("NSColor").ok_or("NSColor unavailable")?;
         let nsbitmap_cls = AnyClass::get("NSBitmapImageRep").ok_or("NSBitmapImageRep unavailable")?;
-        let nsgctx_cls = AnyClass::get("NSGraphicsContext").ok_or("NSGraphicsContext unavailable")?;
         let sym_cfg_cls = AnyClass::get("NSImageSymbolConfiguration")
             .ok_or("NSImageSymbolConfiguration unavailable")?;
 
-        // Build NSString for the symbol name.
         let name_cstr = CString::new(name).map_err(|_| "symbol name has nul".to_string())?;
         let ns_name: *mut AnyObject =
             msg_send![nsstring_cls, stringWithUTF8String: name_cstr.as_ptr()];
         let nil: *mut AnyObject = std::ptr::null_mut();
 
-        // imageWithSystemSymbolName:accessibilityDescription:
         let image: *mut AnyObject = msg_send![
             nsimage_cls,
             imageWithSystemSymbolName: ns_name
@@ -1279,7 +1241,6 @@ pub mod sf_symbols {
             return Err(format!("unknown SF Symbol: {}", name));
         }
 
-        // Apply point size + weight via NSImageSymbolConfiguration.
         let cfg: *mut AnyObject = msg_send![
             sym_cfg_cls,
             configurationWithPointSize: size
@@ -1289,28 +1250,19 @@ pub mod sf_symbols {
         if configured.is_null() {
             return Err("imageWithSymbolConfiguration returned nil".to_string());
         }
-        // setTemplate:YES so tinting works the same way it does for the
-        // native bar's NSImageView path. Even though we draw the image
-        // ourselves below, template mode keeps the alpha channel and
-        // discards Apple's hierarchical fill colours.
+        // Template mode keeps the alpha channel and drops Apple's hierarchical
+        // fill colours, so the PNG masks cleanly to currentColor.
         let _: () = msg_send![configured, setTemplate: true];
 
-        // SF Symbols have varying intrinsic widths — `sparkles` is wider
-        // than tall, `gearshape` is square, etc. Read the configured
-        // image's natural size at point size for the JS side; the actual
-        // rasterisation is delegated to AppKit's
-        // `cgImageForProposedRect:context:hints:`, which renders the
-        // glyph correctly inside its alignment rect (avoiding the
-        // baseline-origin clipping that bites a manual `drawInRect:`).
+        // SF Symbols aren't all square. CGImageForProposedRect renders the
+        // glyph inside its alignment rect, avoiding the baseline-origin
+        // clipping a manual drawInRect: would hit.
         let natural: NSSize = msg_send![configured, size];
         let nat_w = natural.width.max(1.0);
         let nat_h = natural.height.max(1.0);
         let px_w = (nat_w * scale).round();
         let px_h = (nat_h * scale).round();
 
-        // Ask AppKit for the CGImage at the @3x pixel size we want. Pass
-        // a non-null proposedRect with the desired dimensions; AppKit
-        // updates it in-place to the actual rendered rect.
         let mut proposed = NSRect {
             origin: NSPoint { x: 0.0, y: 0.0 },
             size: NSSize { width: px_w, height: px_h },
@@ -1325,10 +1277,6 @@ pub mod sf_symbols {
             return Err("CGImageForProposedRect returned nil".to_string());
         }
 
-        // Wrap the CGImage in an NSBitmapImageRep so we can ask it for
-        // its PNG representation. The CGImage AppKit hands back is
-        // autoreleased; -[NSBitmapImageRep initWithCGImage:] retains it
-        // internally.
         let bitmap: *mut AnyObject = msg_send![nsbitmap_cls, alloc];
         let bitmap: *mut AnyObject = msg_send![
             bitmap,
@@ -1338,24 +1286,13 @@ pub mod sf_symbols {
             return Err("NSBitmapImageRep initWithCGImage failed".to_string());
         }
 
-        // Set DPI hint so the PNG carries its natural CSS px size — the
-        // bitmap's pixelsWide/pixelsHigh stay at the @3x dimensions, but
-        // the size attribute marks the intended display size, which lets
-        // browsers size <img> consumers correctly.
+        // Pixel dims stay at @3x; the CSS-px size hint tells consumers how
+        // wide the glyph wants to render.
         let natural_size = NSSize { width: nat_w, height: nat_h };
         let _: () = msg_send![bitmap, setSize: natural_size];
 
-        // The CGImage AppKit hands back is template-mode (alpha only),
-        // already drawn inside its alignment rect. No further composition
-        // needed.
-        let _ = nscolor_cls;
-        let _ = nsgctx_cls;
-
-        // representationUsingType:NSBitmapImageFileTypePNG(4) properties:nil.
-        // The result is autoreleased; promote it to a Retained<NSData> so we
-        // can use objc2_foundation's typed accessor, which avoids the
-        // `-[NSData bytes]` runtime-type-code mismatch that bites raw
-        // `msg_send!` callers on `_NSInlineData` subclasses.
+        // Retained<NSData> via msg_send_id! avoids the `-[NSData bytes]`
+        // type-code mismatch that bites raw msg_send! on _NSInlineData.
         let png_data: Retained<NSData> = msg_send_id![
             bitmap,
             representationUsingType: 4u64

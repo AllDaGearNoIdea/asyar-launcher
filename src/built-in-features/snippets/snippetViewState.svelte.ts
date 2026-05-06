@@ -14,9 +14,6 @@ class SnippetViewStateClass {
     getText: (s) => `${s.name} ${s.keyword ?? ''} ${s.expansion}`,
   });
 
-  // Selection state is delegated to the shared primitive: it auto-selects
-  // the first item, clamps when filtering shrinks the list, and wraps on
-  // arrow moves. Domain logic (mode transitions) stays in this class.
   private selection = useListSelection({ items: () => this.getFilteredSnippets() });
 
   get selectedIndex(): number {

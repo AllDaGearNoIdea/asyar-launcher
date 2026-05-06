@@ -49,7 +49,9 @@
   --radius-lg: 10px;
   --radius-xl: 12px;
   --radius-full: 9999px;
-  border-radius: var(--radius-xl);
+  /* Launcher shell corner — larger than --radius-xl on purpose so the
+     outer window reads more pronounced than inner surfaces. */
+  border-radius: 20px;
 
   /* Typography */
   --font-ui: "Satoshi", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", "Helvetica Neue", sans-serif;
@@ -573,9 +575,7 @@ html[data-platform="macos"] .app-root {
     @apply flex-1 flex;
   }
 
-  /* Transparent: the launcher's vibrancy shows through. Stacking another
-     translucent fill on top of --bg-primary doubled the alpha and made the
-     split-view look noticeably more opaque than the main launcher. */
+  /* Transparent so the launcher's vibrancy reads through unmodified. */
   .split-view-left {
     @apply overflow-y-auto border-r border-[var(--separator)];
     background-color: transparent;
@@ -936,8 +936,7 @@ html[data-platform="linux"][data-theme="dark"] .macos-panel {
     user-select: none;
   }
 
-  /* Sentence-case section header for list views (clipboard, snippets,
-     actions). Pairs with LauncherListRow rows. */
+  /* Section header for list views (clipboard, snippets, actions). */
   .list-section {
     padding: 16px 9px 4px;
     font-size: var(--font-size-md);
@@ -949,10 +948,7 @@ html[data-platform="linux"][data-theme="dark"] .macos-panel {
     padding-top: 4px;
   }
 
-  /* ── View container (wraps each built-in feature view) ── */
-  /* Transparent: the launcher's --bg-primary is already painted on the
-     parent panel. Stacking another fill here doubled the opacity and made
-     extension views look noticeably less translucent than the launcher. */
+  /* Transparent so the launcher's vibrancy reads through unmodified. */
   .view-container {
     display: flex;
     flex-direction: column;
