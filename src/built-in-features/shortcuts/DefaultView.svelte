@@ -51,7 +51,7 @@
     actionService.registerAction({
       id: 'shortcuts:change',
       title: 'Change',
-      icon: '⌨️',
+      icon: 'icon:pencil',
       extensionId: 'shortcuts',
       category: 'Shortcuts',
       context: ActionContext.EXTENSION_VIEW,
