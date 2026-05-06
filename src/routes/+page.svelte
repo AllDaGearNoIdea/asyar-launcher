@@ -28,6 +28,7 @@
   import WhatsNewPanel from '../components/feedback/WhatsNewPanel.svelte';
   import { whatsNewStore } from '../services/update/whatsNewStore.svelte';
   import { developerSettingsService } from '../services/settings/developerSettingsService.svelte';
+  import { listen, type UnlistenFn } from '@tauri-apps/api/event';
   import '../resources/styles/style.css';
 
   // Instantiate the controller
@@ -107,10 +108,26 @@
     window.addEventListener('keydown', keyboard.handleGlobalKeydown, true);
     window.addEventListener('blur', handleBlur);
 
+    // The launcher panel hides on resign-key (clicked off, hotkey-toggled).
+    // Tear the action popup down too — otherwise it stays mounted while
+    // hidden, and on re-invoke its keydown listener intercepts arrows/enter
+    // before the main launcher does. macOS uses this Tauri event because
+    // the NSPanel doesn't fire DOM blur on the WKWebView.
+    let unlistenResignKey: UnlistenFn | null = null;
+    listen('main_panel_did_resign_key', () => {
+      if (isActionPanelOpen) {
+        isActionPanelOpen = false;
+        keyboard.restoreSearchFocus();
+      }
+    })
+      .then((fn) => { unlistenResignKey = fn; })
+      .catch((e) => logService.debug(`[+page] listen resign-key failed: ${e}`));
+
     return () => {
       window.removeEventListener('keydown', keyboard.handleGlobalKeydown, true);
       document.removeEventListener('click', keyboard.maintainSearchFocus, true);
       window.removeEventListener('blur', handleBlur);
+      unlistenResignKey?.();
     };
   });
 

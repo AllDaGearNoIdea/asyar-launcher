@@ -424,7 +424,7 @@ export class ActionService implements IActionService {
         : "Launch the installer to remove this application",
       category: "Danger",
       context: ActionContext.CORE,
-      shortcut: "⌘⌫",
+      shortcut: "Super+Backspace",
       confirm: true,
       visible: () => {
         if (!UNINSTALL_SUPPORTED) return false;
@@ -503,7 +503,7 @@ export class ActionService implements IActionService {
       description: "Copy a deep link URL for this command",
       category: "Share",
       context: ActionContext.CORE,
-      shortcut: "⌘⇧C",
+      shortcut: "Super+Shift+C",
       visible: () => {
         const idx = searchStores.selectedIndex;
         if (idx < 0) return false;

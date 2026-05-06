@@ -24,6 +24,10 @@
 </footer>
 
 <style>
+  /* Transparent: the launcher panel already provides vibrancy. Stacking
+     another translucent fill (and a redundant backdrop-filter) here doubled
+     the alpha and made the footer look noticeably more opaque than the
+     launcher behind it. */
   .action-footer {
     display: flex;
     align-items: center;
@@ -31,11 +35,23 @@
     height: 48px;
     padding: 0 16px;
     border-top: 1px solid var(--divider-soft);
-    background-color: var(--bg-secondary);
-    backdrop-filter: blur(20px);
+    background-color: transparent;
     flex-shrink: 0;
     z-index: 10;
+    /* The footer sits over translucent vibrancy; bump base text contrast so
+       captions don't dissolve into the desktop showing through. */
+    color: var(--text-secondary);
   }
+
+  /* Captions in this footer (e.g. timestamp, char count) used to default
+     to --text-tertiary, which reads fine on an opaque surface but vanishes
+     against vibrancy. Override scoped to the footer. */
+  :global(.action-footer .text-caption) {
+    color: var(--text-secondary);
+  }
+  /* Tailwind opacity utility used inline (`opacity-70`) compounds against
+     translucent backgrounds. Reset within the footer. */
+  :global(.action-footer .opacity-70) { opacity: 1; }
 
   .action-footer-left,
   .action-footer-right {

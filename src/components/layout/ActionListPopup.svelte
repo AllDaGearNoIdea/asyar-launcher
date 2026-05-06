@@ -10,6 +10,7 @@
   import { filterActions } from './actionFilter';
   import { actionUsageStore } from '../../services/action/actionUsageStore';
   import { scrollSelectedIntoView } from '../../lib/listScroll';
+  import { useListSelection } from '../../lib/listSelection.svelte';
 
   let {
     availableActions = [],
@@ -38,12 +39,13 @@
 
   let flatActions = $derived(groupedActions.flatMap(([, actions]) => actions));
 
-  let selectedIndex = $state(-1);
   let popupRef = $state<HTMLDivElement>();
+
+  const selection = useListSelection({ items: () => flatActions });
 
   function scrollSelected() {
     requestAnimationFrame(() => {
-      if (popupRef) scrollSelectedIntoView(popupRef, selectedIndex);
+      if (popupRef) scrollSelectedIntoView(popupRef, selection.selectedIndex);
     });
   }
 
@@ -62,43 +64,34 @@
 
     if (flatActions.length === 0) return;
 
-    const totalActions = flatActions.length;
-
     switch (event.key) {
       case 'ArrowDown':
-        event.preventDefault();
-        event.stopPropagation();
-        selectedIndex = selectedIndex >= totalActions - 1 ? 0 : selectedIndex + 1;
-        scrollSelected();
-        break;
-
       case 'Tab':
+        if (event.key === 'Tab' && event.shiftKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          selection.moveSelection('up');
+          scrollSelected();
+          break;
+        }
         event.preventDefault();
         event.stopPropagation();
-        if (event.shiftKey) {
-          selectedIndex = selectedIndex <= 0 ? totalActions - 1 : selectedIndex - 1;
-        } else {
-          selectedIndex = selectedIndex >= totalActions - 1 ? 0 : selectedIndex + 1;
-        }
+        selection.moveSelection('down');
         scrollSelected();
         break;
 
       case 'ArrowUp':
         event.preventDefault();
         event.stopPropagation();
-        if (selectedIndex <= 0) {
-          selectedIndex = -1; // deselect all; focus stays on input naturally
-        } else {
-          selectedIndex = selectedIndex - 1;
-          scrollSelected();
-        }
+        selection.moveSelection('up');
+        scrollSelected();
         break;
 
       case 'Enter':
-        if (selectedIndex >= 0) {
+        if (selection.selectedIndex >= 0) {
           event.preventDefault();
           event.stopPropagation();
-          const currentAction = flatActions[selectedIndex];
+          const currentAction = selection.selectedItem;
           if (currentAction) handleActionSelect(currentAction.id);
         }
         // selectedIndex === -1: let Enter pass through to the input naturally
@@ -155,9 +148,8 @@
   }
 
   $effect(() => {
-    selectedIndex = -1;
     const timer = setTimeout(() => {
-      popupRef?.querySelector('input')?.focus();
+      popupRef?.querySelector('input')?.focus({ preventScroll: true });
     }, 50);
     popupRef?.addEventListener('keydown', handleKeydown);
     return () => {
@@ -186,11 +178,10 @@
           {@const flatIndex = flatActions.indexOf(action)}
           <div
             class="action-row"
-            class:action-primary-item={flatIndex === 0}
             class:action-destructive={action.destructive}
           >
             <LauncherListRow
-              selected={flatIndex === selectedIndex}
+              selected={flatIndex === selection.selectedIndex}
               onclick={() => handleActionSelect(action.id)}
               data-index={flatIndex}
               tabindex="-1"
@@ -228,14 +219,43 @@
     max-height: 60vh;
     display: flex;
     flex-direction: column;
-    background: color-mix(in srgb, var(--bg-popup) 85%, transparent);
-    backdrop-filter: blur(20px);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-popup);
+    /* Translucent surface — rows beneath visibly bleed through, like
+       Raycast. Heavy blur keeps content readable despite the low alpha. */
+    background: color-mix(in srgb, var(--bg-popup) 70%, transparent);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-radius: var(--radius-xl); /* 12px — matches launcher window */
+    /* Raycast-style soft elevation: large feathered ambient cast
+       weighted slightly downward, plus a tighter contact layer for
+       definition near the popup edge. No border. */
+    /* Casts to the left (negative X) and slightly down — the popup
+       sits in the bottom-right of the launcher, so its shadow falls
+       leftward across the visible launcher surface. */
+    box-shadow:
+      -28px 20px 80px -20px rgba(0, 0, 0, 0.3),
+      -14px 10px 40px -16px rgba(0, 0, 0, 0.18),
+      -4px 3px 12px -6px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     z-index: 50;
     outline: none;
+  }
+
+  /* Forced dark theme */
+  :global(html[data-theme="dark"]) .action-popup {
+    box-shadow:
+      -28px 20px 80px -20px rgba(0, 0, 0, 0.6),
+      -14px 10px 40px -16px rgba(0, 0, 0, 0.4),
+      -4px 3px 12px -6px rgba(0, 0, 0, 0.25);
+  }
+
+  /* OS-tracking dark (no explicit data-theme) */
+  @media (prefers-color-scheme: dark) {
+    :global(html:not([data-theme])) .action-popup {
+      box-shadow:
+        -28px 20px 80px -20px rgba(0, 0, 0, 0.6),
+        -14px 10px 40px -16px rgba(0, 0, 0, 0.4),
+        -4px 3px 12px -6px rgba(0, 0, 0, 0.25);
+    }
   }
 
   .action-scroll {
@@ -263,7 +283,7 @@
   .action-search {
     padding: 6px 12px;
     border-top: 1px solid var(--divider-soft);
-    background: color-mix(in srgb, var(--bg-popup) 95%, transparent);
+    background: transparent;
   }
 
   .action-search :global(.input) {
@@ -282,15 +302,17 @@
     font-size: var(--font-size-md);
   }
 
-  .action-primary-item :global(.result-title) {
-    font-weight: 600;
-    color: var(--accent-primary);
+  /* Inside the actions popup, built-in icons render as flat glyphs in
+     the title color — not filled blue tiles. The popup is a secondary
+     surface and doesn't need the brand-tile treatment. */
+  .action-popup :global(.builtin-icon-tile) {
+    background-color: transparent;
+    color: var(--text-primary);
   }
 
-  /* Destructive actions read as red — both label and icon, regardless of
-     whether the row is also the primary item. */
+  /* Destructive actions read as red — title and icon glyph both. */
   .action-destructive :global(.result-title),
-  .action-destructive :global(.result-item > div > div:first-child) {
+  .action-destructive :global(.builtin-icon-tile) {
     color: var(--accent-danger) !important;
   }
 </style>

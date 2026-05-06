@@ -310,10 +310,10 @@ html[data-platform="macos"] .app-root {
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    --bg-primary: rgba(240, 240, 245, 0.85);
+    --bg-primary: rgba(240, 240, 245, 0.65);
     --bg-popup: rgb(240, 240, 245);
-    --bg-secondary: rgba(230, 230, 235, 0.85);
-    --bg-tertiary: rgba(245, 245, 247, 0.85);
+    --bg-secondary: rgba(230, 230, 235, 0.65);
+    --bg-tertiary: rgba(245, 245, 247, 0.65);
     --bg-hover: rgba(220, 220, 225, 0.5);
     --bg-selected: rgba(140, 140, 148, 0.22);
     --bg-secondary-full-opacity: rgb(230, 230, 235);
@@ -385,10 +385,10 @@ html[data-platform="macos"] .app-root {
 }
 
 :root[data-theme="light"] {
-  --bg-primary: rgba(240, 240, 245, 0.85);
+  --bg-primary: rgba(240, 240, 245, 0.65);
   --bg-popup: rgb(240, 240, 245);
-  --bg-secondary: rgba(230, 230, 235, 0.85);
-  --bg-tertiary: rgba(245, 245, 247, 0.85);
+  --bg-secondary: rgba(230, 230, 235, 0.65);
+  --bg-tertiary: rgba(245, 245, 247, 0.65);
   --bg-hover: rgba(220, 220, 225, 0.5);
   --bg-selected: rgba(140, 140, 148, 0.22);
   --bg-secondary-full-opacity: rgb(230, 230, 235);
@@ -573,16 +573,19 @@ html[data-platform="macos"] .app-root {
     @apply flex-1 flex;
   }
 
+  /* Transparent: the launcher's vibrancy shows through. Stacking another
+     translucent fill on top of --bg-primary doubled the alpha and made the
+     split-view look noticeably more opaque than the main launcher. */
   .split-view-left {
     @apply overflow-y-auto border-r border-[var(--separator)];
-    background-color: var(--bg-secondary);
+    background-color: transparent;
     position: relative;
     z-index: 1;
   }
 
   .split-view-right {
     @apply flex-1 overflow-y-auto;
-    background-color: var(--bg-primary);
+    background-color: transparent;
   }
 
   .custom-scrollbar {
@@ -947,11 +950,14 @@ html[data-platform="linux"][data-theme="dark"] .macos-panel {
   }
 
   /* ── View container (wraps each built-in feature view) ── */
+  /* Transparent: the launcher's --bg-primary is already painted on the
+     parent panel. Stacking another fill here doubled the opacity and made
+     extension views look noticeably less translucent than the launcher. */
   .view-container {
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: var(--bg-primary);
+    background: transparent;
     color: var(--text-primary);
     font-family: var(--font-ui);
     font-size: var(--font-size-base);

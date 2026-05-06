@@ -49,8 +49,8 @@
       {@render leading()}
     {:else if icon}
       {#if isBuiltInIcon(icon)}
-        <div class="w-[23px] h-[23px] flex items-center justify-center text-[var(--accent-primary)] flex-shrink-0 rounded">
-          <Icon name={getBuiltInIconName(icon)} size={23} />
+        <div class="builtin-icon-tile">
+          <Icon name={getBuiltInIconName(icon)} size={15} />
         </div>
       {:else if isIconImage(icon)}
         <img
@@ -91,6 +91,21 @@
 </button>
 
 <style>
+  /* Built-in icons render as a filled blue tile (matching the size of
+     application icons in the same row) with a white glyph — same
+     visual weight as Raycast's filled-square treatment. */
+  .builtin-icon-tile {
+    width: 23px;
+    height: 23px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 5px;
+    background-color: var(--accent-primary);
+    color: #fff;
+  }
+
   /* The .alias-chip rule lives in ResultsList.svelte today; mirroring
      here so a row used outside that container still renders correctly. */
   .alias-chip {

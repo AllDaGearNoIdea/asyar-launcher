@@ -23,13 +23,12 @@ pub enum ResolvedTheme {
 }
 
 /// Picks the NSVisualEffectMaterial that gives the best contrast for the
-/// resolved appearance. Sidebar is an opaque light-tinted material that reads
-/// clearly in light mode; HudWindow is the dark translucent default.
-pub fn material_for_resolved_theme(theme: ResolvedTheme) -> NSVisualEffectMaterial {
-    match theme {
-        ResolvedTheme::Light => NSVisualEffectMaterial::Sidebar,
-        ResolvedTheme::Dark => NSVisualEffectMaterial::HudWindow,
-    }
+/// resolved appearance. HudWindow gives a translucent vibrancy that reads as
+/// an even darkening over the desktop in both modes — switching to a lighter
+/// material in light mode (e.g. Sidebar) made the launcher noticeably less
+/// translucent than dark mode, so we use HudWindow uniformly.
+pub fn material_for_resolved_theme(_theme: ResolvedTheme) -> NSVisualEffectMaterial {
+    NSVisualEffectMaterial::HudWindow
 }
 
 /// Resolves a `ThemePreference` to the actual appearance at call time.
@@ -1086,15 +1085,17 @@ pub fn apply_show_more_bar_style(
 mod tests {
     use super::*;
 
-    /// Light resolves to Sidebar material (opaque, good contrast in light mode).
+    /// Both Light and Dark map to HudWindow today. We previously tried
+    /// switching Light to Sidebar for crisper text on light desktops, but
+    /// that material is much less translucent — the launcher ended up
+    /// looking nearly opaque in light mode while staying vibrant in dark.
     #[cfg(target_os = "macos")]
     #[test]
-    fn light_theme_maps_to_sidebar_material() {
+    fn light_theme_maps_to_hud_window_material() {
         let material = material_for_resolved_theme(ResolvedTheme::Light);
-        assert_eq!(material, NSVisualEffectMaterial::Sidebar);
+        assert_eq!(material, NSVisualEffectMaterial::HudWindow);
     }
 
-    /// Dark resolves to HudWindow material (the existing default for dark mode).
     #[cfg(target_os = "macos")]
     #[test]
     fn dark_theme_maps_to_hud_window_material() {
