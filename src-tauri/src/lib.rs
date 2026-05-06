@@ -366,6 +366,7 @@ pub fn run() {
             commands::extension_onboarding::complete_extension_onboarding,
             commands::extension_onboarding::reset_extension_onboarding,
             commands::extension_onboarding::is_extension_onboarded,
+            commands::sf_symbols::render_sf_symbol_mask,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

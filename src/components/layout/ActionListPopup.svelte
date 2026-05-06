@@ -14,11 +14,23 @@
 
   let {
     availableActions = [],
+    selectedItemName = null,
+    inExtensionView = false,
     onclose
   }: {
     availableActions?: ApplicationAction[];
+    /** Name of the currently-selected launcher row. Drives the popup
+     * header on the main launcher (e.g. "Clipboard History"). Ignored
+     * when inExtensionView is true. */
+    selectedItemName?: string | null;
+    /** True when an extension view is active. Suppresses the header
+     * entirely — the popup's actions are obviously about the current
+     * view, no anchor needed. */
+    inExtensionView?: boolean;
     onclose?: () => void;
   } = $props();
+
+  let showHeader = $derived(!inExtensionView && !!selectedItemName);
 
   let searchQuery = $state('');
 
@@ -170,10 +182,13 @@
 >
   <h2 id="action-list-heading" class="sr-only">Available Actions</h2>
 
+  {#if showHeader}
+    <div class="popup-header">{selectedItemName}</div>
+  {/if}
+
   <div class="action-scroll custom-scrollbar">
-    {#each groupedActions as [category, groupActions], groupIndex}
+    {#each groupedActions as [, groupActions], groupIndex}
       <div class="group-section" class:first-group={groupIndex === 0}>
-        <div class="list-section">{category}</div>
         {#each groupActions as action}
           {@const flatIndex = flatActions.indexOf(action)}
           <div
@@ -215,15 +230,17 @@
     position: fixed;
     bottom: 48px; /* 40px bar height + 8px gap */
     right: 12px;
-    width: 340px;
-    max-height: 60vh;
+    width: 350px;
+    height: 243px;
     display: flex;
     flex-direction: column;
-    /* Translucent surface — rows beneath visibly bleed through, like
-       Raycast. Heavy blur keeps content readable despite the low alpha. */
-    background: color-mix(in srgb, var(--bg-popup) 70%, transparent);
-    backdrop-filter: blur(40px) saturate(180%);
-    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    /* Frosted-glass overlay — Raycast's popup reads as a brighter
+       diffuse layer floating *on top* of the launcher rather than a
+       see-through window. Higher alpha gives it body; aggressive blur
+       and saturation smear what's underneath into a soft glow. */
+    background: color-mix(in srgb, var(--bg-popup) 80%, transparent);
+    backdrop-filter: blur(60px) saturate(200%);
+    -webkit-backdrop-filter: blur(60px) saturate(200%);
     border-radius: var(--radius-xl); /* 12px — matches launcher window */
     /* Raycast-style soft elevation: large feathered ambient cast
        weighted slightly downward, plus a tighter contact layer for
@@ -258,6 +275,19 @@
     }
   }
 
+  /* Single context header at the top of the popup, replacing the old
+     per-category section labels. Shows the currently-selected launcher
+     row's name (e.g. "Clipboard History") so the user knows whose
+     actions these are. Suppressed when inside an extension view.
+     Sits close to the first action — no divider, mirroring Raycast. */
+  .popup-header {
+    padding: 12px 14px 0;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    user-select: none;
+  }
+
   .action-scroll {
     flex: 1;
     overflow-y: auto;
@@ -274,16 +304,54 @@
     margin-bottom: 4px;
   }
 
-  .group-section:not(.first-group) {
-    border-top: 1px solid var(--divider-soft);
-    padding-top: 4px;
-    margin-top: 4px;
+  /* Edge-to-edge divider above each non-first group, with generous
+     breathing room either side — matches Raycast's section spacing.
+     Negative horizontal margins cancel `.action-scroll`'s 8px padding
+     so the rule spans the full popup width while the rows above and
+     below stay inset. Slightly stronger than --divider-soft so it
+     reads clearly on the translucent popup surface. */
+  .group-section:not(.first-group)::before {
+    content: '';
+    display: block;
+    height: 1px;
+    background-color: rgba(60, 60, 67, 0.11);
+    margin: 10px -8px 10px;
+  }
+  :global(html[data-theme="dark"]) .group-section:not(.first-group)::before,
+  :global(html:not([data-theme])) .group-section:not(.first-group)::before {
+    background-color: rgba(255, 255, 255, 0.07);
+  }
+  @media (prefers-color-scheme: light) {
+    :global(html:not([data-theme])) .group-section:not(.first-group)::before {
+      background-color: rgba(60, 60, 67, 0.11);
+    }
   }
 
   .action-search {
-    padding: 6px 12px;
-    border-top: 1px solid var(--divider-soft);
+    /* Fixed 41px row to match Raycast's search-input footer. */
+    height: 41px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    /* Matches the section dividers above — same contrast as Raycast's
+       rule above the action search input. */
+    border-top: 1px solid rgba(60, 60, 67, 0.11);
     background: transparent;
+    box-sizing: border-box;
+  }
+  .action-search :global(.input-wrapper),
+  .action-search > :global(*) {
+    width: 100%;
+  }
+  :global(html[data-theme="dark"]) .action-search,
+  :global(html:not([data-theme])) .action-search {
+    border-top-color: rgba(255, 255, 255, 0.07);
+  }
+  @media (prefers-color-scheme: light) {
+    :global(html:not([data-theme])) .action-search {
+      border-top-color: rgba(60, 60, 67, 0.11);
+    }
   }
 
   .action-search :global(.input) {
@@ -292,6 +360,14 @@
     border: none;
     background: transparent;
     border-radius: 0;
+    color: var(--text-primary);
+    /* Match the main launcher caret tint so the blinker reads
+       consistently across the two inputs. */
+    caret-color: color-mix(in srgb, var(--text-primary) 60%, var(--bg-secondary-full-opacity) 40%) !important;
+  }
+  .action-search :global(.input::placeholder) {
+    color: color-mix(in srgb, var(--text-primary) 50%, var(--bg-secondary-full-opacity) 50%);
+    font-weight: 500;
   }
   .action-search :global(.input:focus) {
     border: none;

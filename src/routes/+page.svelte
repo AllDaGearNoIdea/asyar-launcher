@@ -145,6 +145,19 @@
   const argumentMode = $derived(commandArgumentsService.active);
   const argumentCanSubmit = $derived(commandArgumentsService.canSubmit());
 
+  // Header title for the action popup. Prefer the original SearchResult.name
+  // so the chip stays stable through subtitle/icon changes; fall back to the
+  // rendered row title when the original is briefly null (e.g. during list
+  // churn just after navigating back to the launcher).
+  const actionPopupHeaderName = $derived.by(() => {
+    const original = controller.currentSelectedItemOriginal?.name;
+    if (original) return original;
+    const idx = controller.selectedIndexVal;
+    const items = controller.searchResultItemsMapped;
+    if (idx >= 0 && idx < items.length) return items[idx].title ?? null;
+    return null;
+  });
+
   async function handleArgSubmit() {
     try {
       await commandArgumentsService.submit();
@@ -224,8 +237,10 @@
   </div>
 
   {#if isActionPanelOpen}
-    <ActionListPopup 
-      availableActions={bottomActionBarInstance?.getEnrichedActions() || []} 
+    <ActionListPopup
+      availableActions={bottomActionBarInstance?.getEnrichedActions() || []}
+      selectedItemName={actionPopupHeaderName}
+      inExtensionView={!!controller.activeViewVal}
       onclose={handleActionPanelClose}
     />
   {/if}
